@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>Answer Pilot — AI Study Assistant</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+```
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+```
+<!-- =========================
+     TOP BRAND
+========================== -->
+<header class="brand">
+
+    <div class="brand-logo">
+        <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="Answer Pilot Logo"
+            onerror="this.style.display='none';"
+        >
+    </div>
+
+    <div>
+        <h2>Answer Pilot</h2>
+        <span>AI STUDY ASSISTANT</span>
+    </div>
+
+</header>
+
+
+<!-- =========================
+     SIDEBAR
+========================== -->
+<aside class="sidebar">
+
+    <!-- Upload -->
+    <section class="sidebar-section">
+
+        <div class="section-label">
+            Study Materials
+        </div>
+
+        <label class="upload-box" for="fileInput">
+
+            <div class="upload-icon">
+                ↑
+            </div>
+
+            <strong>
+                Upload your documents
+            </strong>
+
+            <span>
+                PDF, TXT, DOCX
+            </span>
+
+        </label>
+
+        <input
+            type="file"
+            id="fileInput"
+            accept=".pdf,.txt,.docx"
+            multiple
+            hidden
+        >
+
+        <div class="file-header">
+            <span>Uploaded files</span>
+            <span id="fileCount">0 files</span>
+        </div>
+
+        <div id="fileList" class="file-list"></div>
+
+    </section>
+
+
+    <!-- Settings -->
+    <section class="sidebar-section">
+
+        <div class="section-label">
+            Answer Settings
+        </div>
+
+        <div class="setting-group">
+
+            <label>
+                Answer Type
+            </label>
+
+            <div class="answer-type-grid">
+
+                <button
+                    type="button"
+                    class="answer-type active"
+                    data-type="exam"
+                >
+                    Exam Answer
+                </button>
+
+                <button
+                    type="button"
+                    class="answer-type"
+                    data-type="simple"
+                >
+                    Simple
+                </button>
+
+                <button
+                    type="button"
+                    class="answer-type"
+                    data-type="detailed"
+                >
+                    Detailed
+                </button>
+
+                <button
+                    type="button"
+                    class="answer-type"
+                    data-type="points"
+                >
+                    Key Points
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="setting-group">
+
+            <label for="languageSelect">
+                Language
+            </label>
+
+            <select id="languageSelect">
+
+                <option value="English">
+                    English
+                </option>
+
+                <option value="Telugu">
+                    Telugu
+                </option>
+
+                <option value="Hinglish">
+                    English + Telugu
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="setting-group">
+
+            <label for="lengthSelect">
+                Answer Length
+            </label>
+
+            <select id="lengthSelect">
+
+                <option value="short">
+                    Short
+                </option>
+
+                <option value="medium" selected>
+                    Medium
+                </option>
+
+                <option value="long">
+                    Long
+                </option>
+
+            </select>
+
+        </div>
+
+    </section>
+
+
+    <!-- What You Get -->
+    <section class="sidebar-section">
+
+        <div class="section-label">
+            What You Get
+        </div>
+
+        <p>
+            ✦ AI-generated answers
+        </p>
+
+        <p>
+            ✦ Handwritten-style notes
+        </p>
+
+        <p>
+            ✦ Multiple pages for long answers
+        </p>
+
+        <p>
+            ✦ Downloadable study notes
+        </p>
+
+    </section>
+
+
+    <div class="sidebar-footer">
+        Answer Pilot • AI Study Workspace
+    </div>
+
+</aside>
+
+
+<!-- =========================
+     MAIN CONTENT
+========================== -->
+<main class="main-content">
+
+    <div class="topbar">
+
+        <div class="eyebrow">
+            AI POWERED STUDY WORKSPACE
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         QUESTION CARD
+    ========================== -->
+    <section class="workspace-card">
+
+        <div class="card-heading">
+
+            <div>
+                <h2>
+                    Ask your question
+                </h2>
+            </div>
+
+            <span class="rag-badge">
+                RAG ENABLED
+            </span>
+
+        </div>
+
+
+        <div class="question-area">
+
+            <textarea
+                id="questionInput"
+                placeholder="Ask anything... e.g. What is Database with suitable examples?"
+                rows="3"
+            ></textarea>
+
+            <div class="question-bottom">
+
+                <span>
+                    Press Generate to create your answer
+                </span>
+
+                <button
+                    type="button"
+                    id="generateButton"
+                    class="generate-button"
+                >
+                    <span>✦</span>
+                    Generate Answer
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         ANSWER CARD
+    ========================== -->
+    <section class="workspace-card">
+
+        <div class="card-heading">
+
+            <div>
+                <h2>
+                    AI Answer
+                </h2>
+            </div>
+
+            <span
+                id="answerStatus"
+                class="card-tag"
+            >
+                READY
+            </span>
+
+        </div>
+
+
+        <div
+            id="answerOutput"
+            class="answer-output"
+        >
+            <div class="empty-notes">
+
+                <div>✦</div>
+
+                <span>
+                    Ask a question to generate your answer.
+                </span>
+
+            </div>
+        </div>
+
+
+        <div class="answer-actions">
+
+            <button
+                type="button"
+                id="copyAnswerButton"
+                class="copy-button"
+            >
+                Copy Answer
+            </button>
+
+            <button
+                type="button"
+                id="regenerateButton"
+                class="regenerate-button"
+            >
+                Regenerate
+            </button>
+
+            <button
+                type="button"
+                id="downloadAnswerButton"
+                class="download-button"
+            >
+                Download Answer
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         HANDWRITTEN NOTES CARD
+    ========================== -->
+    <section class="workspace-card">
+
+        <div class="card-heading">
+
+            <div>
+                <h2>
+                    Handwritten Notes
+                </h2>
+            </div>
+
+            <span class="card-tag">
+                AI NOTES
+            </span>
+
+        </div>
+
+
+        <div
+            id="notesPreview"
+            class="notes-preview"
+        >
+
+            <div class="empty-notes">
+
+                <div>✎</div>
+
+                <span>
+                    Your handwritten-style notes will appear here.
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Page Controls -->
+
+        <div class="notes-controls">
+
+            <div
+                id="pageCounter"
+                class="page-counter"
+            >
+                Page 0 / 0
+            </div>
+
+            <div class="page-buttons">
+
+                <button
+                    type="button"
+                    id="previousPage"
+                    title="Previous page"
+                >
+                    ←
+                </button>
+
+                <button
+                    type="button"
+                    id="nextPage"
+                    title="Next page"
+                >
+                    →
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="downloadNotesButton"
+            class="notes-download"
+        >
+            Download Handwritten Notes
+        </button>
+
+    </section>
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+    <footer>
+
+        <strong>
+            Answer Pilot
+        </strong>
+
+        <span>
+            Learn smarter • Write better • Prepare faster
+        </span>
+
+    </footer>
+
+</main>
+```
+
+</div>
+
+<!-- =========================
+     JAVASCRIPT
+========================== -->
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+</html>
