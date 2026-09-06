@@ -22,23 +22,25 @@ const lengthSelect = document.getElementById("lengthSelect");
 
 const answerStatus = document.getElementById("answerStatus");
 
-const answerTypeButtons = document.querySelectorAll(".answer-type");
+const answerTypeButtons =
+    document.querySelectorAll(".answer-type");
 
 let lastQuestion = "";
 let lastAnswer = "";
+
 let selectedAnswerType = "exam";
+
+let uploadedFiles = [];
 
 let notePages = [];
 let currentPage = 0;
 
-let uploadedFiles = [];
-
-
 /* ============================================================
-   ANSWER TYPE
+ANSWER TYPE
 ============================================================ */
 
 answerTypeButtons.forEach(function (button) {
+
     button.addEventListener("click", function () {
 
         answerTypeButtons.forEach(function (item) {
@@ -50,12 +52,8 @@ answerTypeButtons.forEach(function (button) {
         selectedAnswerType =
             button.getAttribute("data-type") || "exam";
     });
+
 });
-
-
-/* ============================================================
-   GET ANSWER TYPE
-============================================================ */
 
 function getAnswerType() {
 
@@ -74,9 +72,8 @@ function getAnswerType() {
     return "5 Marks";
 }
 
-
 /* ============================================================
-   GENERATE ANSWER
+GENERATE
 ============================================================ */
 
 async function generateAnswer() {
@@ -95,60 +92,62 @@ async function generateAnswer() {
 
     lastQuestion = question;
 
-    if (generateButton) {
-        generateButton.disabled = true;
-        generateButton.innerHTML = "Generating...";
-    }
+    setLoading(true);
 
-    if (answerStatus) {
-        answerStatus.textContent = "GENERATING";
-    }
-
-    if (answerOutput) {
-        answerOutput.innerHTML =
-            '<div class="empty-notes">' +
-            '<div class="loading-spinner"></div>' +
-            '<span>Creating your answer...</span>' +
-            '</div>';
-    }
-
-    if (notesPreview) {
-        notesPreview.innerHTML =
-            '<div class="empty-notes">' +
-            '<div>✎</div>' +
-            '<span>Preparing handwritten-style notes...</span>' +
-            '</div>';
-    }
+    showAnswerLoading();
+    showNotesLoading();
+    setStatus("GENERATING");
 
     try {
 
         const response = await fetch("/ask", {
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
+
                 question: question,
-                answer_type: getAnswerType(),
-                language: languageSelect
-                    ? languageSelect.value
-                    : "English",
-                note_style: "Handwritten Study Notes"
+
+                answer_type:
+                    getAnswerType(),
+
+                language:
+                    languageSelect
+                        ? languageSelect.value
+                        : "English",
+
+                length:
+                    lengthSelect
+                        ? lengthSelect.value
+                        : "medium",
+
+                note_style:
+                    "Handwritten Study Notes"
             })
         });
 
         const data = await response.json();
 
         if (!response.ok || !data.success) {
+
             throw new Error(
-                data.message || "Could not generate answer."
+                data.message ||
+                "Could not generate answer."
             );
         }
 
-        lastAnswer = data.answer || "";
+        lastAnswer = String(
+            data.answer || ""
+        ).trim();
 
         if (!lastAnswer) {
-            throw new Error("AI returned an empty answer.");
+
+            throw new Error(
+                "AI returned an empty answer."
+            );
         }
 
         displayAnswer(lastAnswer);
@@ -158,49 +157,119 @@ async function generateAnswer() {
             lastAnswer
         );
 
-        if (answerStatus) {
-            answerStatus.textContent = "READY";
-        }
+        setStatus("READY");
 
     } catch (error) {
 
-        console.error("Answer Pilot Error:", error);
+        console.error(
+            "Answer Pilot Error:",
+            error
+        );
 
-        if (answerStatus) {
-            answerStatus.textContent = "ERROR";
-        }
+        showAnswerError(
+            error.message
+        );
 
-        if (answerOutput) {
-            answerOutput.innerHTML =
-                '<div class="error-answer">' +
-                '<h3>Unable to generate answer</h3>' +
-                '<p>' +
-                escapeHTML(error.message) +
-                '</p>' +
-                '</div>';
-        }
+        showNotesError();
 
-        if (notesPreview) {
-            notesPreview.innerHTML =
-                '<div class="empty-notes">' +
-                '<div>!</div>' +
-                '<span>Notes could not be generated.</span>' +
-                '</div>';
-        }
+        setStatus("ERROR");
 
     } finally {
 
-        if (generateButton) {
-            generateButton.disabled = false;
-            generateButton.innerHTML =
-                '<span>✦</span> Generate Answer';
-        }
+        setLoading(false);
     }
 }
 
+/* ============================================================
+UI STATE
+============================================================ */
+
+function setLoading(loading) {
+
+    if (!generateButton) {
+        return;
+    }
+
+    generateButton.disabled = loading;
+
+    if (loading) {
+
+        generateButton.innerHTML =
+            "Generating...";
+
+    } else {
+
+        generateButton.innerHTML =
+            "<span>✦</span> Generate Answer";
+    }
+}
+
+function setStatus(status) {
+
+    if (answerStatus) {
+        answerStatus.textContent = status;
+    }
+}
+
+function showAnswerLoading() {
+
+    if (!answerOutput) {
+        return;
+    }
+
+    answerOutput.innerHTML =
+        '<div class="empty-notes">' +
+        '<div>✦</div>' +
+        '<span>Generating your exam-ready answer...</span>' +
+        '</div>';
+}
+
+function showNotesLoading() {
+
+    if (!notesPreview) {
+        return;
+    }
+
+    notesPreview.innerHTML =
+        '<div class="empty-notes">' +
+        '<div>✎</div>' +
+        '<span>Preparing handwritten study notes...</span>' +
+        '</div>';
+}
+
+function showAnswerError(message) {
+
+    if (!answerOutput) {
+        return;
+    }
+
+    answerOutput.innerHTML =
+        '<div class="empty-notes">' +
+        '<div>!</div>' +
+        '<span>' +
+        escapeHTML(
+            message ||
+            "Something went wrong."
+        ) +
+        '</span>' +
+        '</div>';
+}
+
+function showNotesError() {
+
+    if (!notesPreview) {
+        return;
+    }
+
+    notesPreview.innerHTML =
+        '<div class="empty-notes">' +
+        '<div>!</div>' +
+        '<span>Handwritten notes could not be created.</span>' +
+        '</div>';
+}
 
 /* ============================================================
-   DISPLAY ANSWER
+NORMAL ANSWER
 ============================================================ */
 
 function displayAnswer(answer) {
@@ -215,17 +284,13 @@ function displayAnswer(answer) {
         '</div>';
 }
 
-
-/* ============================================================
-   FORMAT ANSWER
-============================================================ */
-
 function formatAnswer(text) {
 
-    const lines = text
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .split("\n");
+    const cleaned =
+        cleanMarkdown(text);
+
+    const lines =
+        cleaned.split("\n");
 
     let html = "";
     let listOpen = false;
@@ -238,54 +303,39 @@ function formatAnswer(text) {
         }
     }
 
-    lines.forEach(function (line) {
+    lines.forEach(function (rawLine) {
 
-        line = line.trim();
+        const line =
+            rawLine.trim();
 
         if (!line) {
-            closeList();
-            html += '<div class="answer-space"></div>';
-            return;
-        }
-
-        if (line.indexOf("### ") === 0) {
 
             closeList();
 
             html +=
-                "<h3>" +
-                formatInlineText(line.substring(4)) +
-                "</h3>";
+                '<div class="answer-space"></div>';
 
             return;
         }
 
-        if (line.indexOf("## ") === 0) {
+        if (/^#{1,3}\s+/.test(line)) {
 
             closeList();
 
             html +=
                 "<h2>" +
-                formatInlineText(line.substring(3)) +
+                formatInline(
+                    removeHeadingMarks(line)
+                ) +
                 "</h2>";
 
             return;
         }
 
-        if (line.indexOf("# ") === 0) {
-
-            closeList();
-
-            html +=
-                "<h1>" +
-                formatInlineText(line.substring(2)) +
-                "</h1>";
-
-            return;
-        }
-
         const numbered =
-            line.match(/^(\d+)[.)]\s*(.*)$/);
+            line.match(
+                /^(\d+)[.)]\s*(.+)$/
+            );
 
         if (numbered) {
 
@@ -293,30 +343,41 @@ function formatAnswer(text) {
 
             html +=
                 '<div class="answer-point">' +
+
                 '<span class="point-number">' +
-                escapeHTML(numbered[1]) +
-                '.</span>' +
-                '<span>' +
-                formatInlineText(numbered[2]) +
-                '</span>' +
-                '</div>';
+                escapeHTML(
+                    numbered[1]
+                ) +
+                ".</span> " +
+
+                formatInline(
+                    numbered[2]
+                ) +
+
+                "</div>";
 
             return;
         }
 
         const bullet =
-            line.match(/^[-*•]\s+(.*)$/);
+            line.match(
+                /^[-*•]\s*(.+)$/
+            );
 
         if (bullet) {
 
             if (!listOpen) {
+
                 html += "<ul>";
+
                 listOpen = true;
             }
 
             html +=
                 "<li>" +
-                formatInlineText(bullet[1]) +
+                formatInline(
+                    bullet[1]
+                ) +
                 "</li>";
 
             return;
@@ -326,8 +387,8 @@ function formatAnswer(text) {
 
         html +=
             '<p class="answer-paragraph">' +
-            formatInlineText(line) +
-            '</p>';
+            formatInline(line) +
+            "</p>";
     });
 
     closeList();
@@ -335,116 +396,239 @@ function formatAnswer(text) {
     return html;
 }
 
-
 /* ============================================================
-   INLINE TEXT
+MARKDOWN CLEANUP
 ============================================================ */
 
-function formatInlineText(text) {
+function cleanMarkdown(text) {
 
-    let safeText = escapeHTML(text);
+    if (!text) {
+        return "";
+    }
 
-    safeText = safeText.replace(
-        /\*\*(.*?)\*\*/g,
-        "<strong>$1</strong>"
-    );
+    let value =
+        String(text)
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
 
-    safeText = safeText.replace(
-        /\*(.*?)\*/g,
-        "<em>$1</em>"
-    );
+    value =
+        value.replace(
+            /```[a-zA-Z0-9_-]*\s*/g,
+            ""
+        );
 
-    return safeText;
+    value =
+        value.replace(
+            /```/g,
+            ""
+        );
+
+    value =
+        value.replace(
+            /^---+\s*$/gm,
+            ""
+        );
+
+    value =
+        value.replace(
+            /^\s*\\{2,3}/gm,
+            ""
+        );
+
+    return value.trim();
 }
 
+function removeHeadingMarks(text) {
 
-/* ============================================================
-   ESCAPE HTML
-============================================================ */
+    return text
+        .replace(/^###\s+/, "")
+        .replace(/^##\s+/, "")
+        .replace(/^#\s+/, "")
+        .trim();
+}
+
+function formatInline(text) {
+
+    let value =
+        escapeHTML(text);
+
+    value =
+        value.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+        );
+
+    value =
+        value.replace(
+            /__(.*?)__/g,
+            "<strong>$1</strong>"
+        );
+
+    value =
+        value.replace(
+            /\*(.*?)\*/g,
+            "<em>$1</em>"
+        );
+
+    value =
+        value.replace(
+            /_(.*?)_/g,
+            "<em>$1</em>"
+        );
+
+    return value;
+}
 
 function escapeHTML(text) {
 
-    const div = document.createElement("div");
+    const element =
+        document.createElement("div");
 
-    div.textContent = String(text);
+    element.textContent =
+        String(text);
 
-    return div.innerHTML;
+    return element.innerHTML;
 }
 
-
 /* ============================================================
-   CREATE HANDWRITTEN NOTES
+HANDWRITTEN NOTES
 ============================================================ */
 
-function createHandwrittenNotes(question, answer) {
+function createHandwrittenNotes(
+    question,
+    answer
+) {
 
-    const lines = answer
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .split("\n")
-        .map(function (line) {
-            return line.trim();
-        })
-        .filter(function (line) {
-            return line.length > 0;
-        });
+    const cleanAnswer =
+        cleanMarkdown(answer);
 
-    let linesPerPage = 16;
-
-    if (lengthSelect) {
-
-        if (lengthSelect.value === "short") {
-            linesPerPage = 12;
-        }
-
-        if (lengthSelect.value === "long") {
-            linesPerPage = 20;
-        }
-    }
-
-    notePages = [];
-
-    let currentLines = [];
-
-    lines.forEach(function (line) {
-
-        currentLines.push(line);
-
-        if (currentLines.length >= linesPerPage) {
-
-            notePages.push({
-                question: question,
-                lines: currentLines
+    const lines =
+        cleanAnswer
+            .split("\n")
+            .map(function (line) {
+                return line.trim();
+            })
+            .filter(function (line) {
+                return line.length > 0;
             });
 
-            currentLines = [];
-        }
-    });
-
-    if (currentLines.length > 0) {
-
-        notePages.push({
-            question: question,
-            lines: currentLines
-        });
-    }
-
-    if (notePages.length === 0) {
-
-        notePages.push({
-            question: question,
-            lines: [answer]
-        });
-    }
+    notePages =
+        splitIntoNaturalPages(
+            question,
+            lines
+        );
 
     currentPage = 0;
 
     renderNotePage();
+
+    updatePageControls();
 }
 
+/* ============================================================
+NATURAL PAGE SPLITTING
+============================================================ */
+
+function splitIntoNaturalPages(
+    question,
+    lines
+) {
+
+    const pages = [];
+
+    let currentPageLines = [];
+    let currentCharacters = 0;
+
+    const maxCharacters =
+        getPageCharacterLimit();
+
+    lines.forEach(function (line) {
+
+        const lineLength =
+            line.length;
+
+        const isHeading =
+            /^#{1,3}\s+/.test(line);
+
+        const isNumbered =
+            /^\d+[.)]\s+/.test(line);
+
+        const extraSpace =
+            isHeading || isNumbered
+                ? 35
+                : 0;
+
+        const newSize =
+            currentCharacters +
+            lineLength +
+            extraSpace;
+
+        if (
+            currentPageLines.length > 0 &&
+            newSize > maxCharacters
+        ) {
+
+            pages.push({
+                question: question,
+                lines: currentPageLines
+            });
+
+            currentPageLines = [];
+
+            currentCharacters = 0;
+        }
+
+        currentPageLines.push(line);
+
+        currentCharacters +=
+            lineLength +
+            extraSpace;
+    });
+
+    if (currentPageLines.length > 0) {
+
+        pages.push({
+            question: question,
+            lines: currentPageLines
+        });
+    }
+
+    if (pages.length === 0) {
+
+        pages.push({
+            question: question,
+            lines: [
+                "No answer available."
+            ]
+        });
+    }
+
+    return pages;
+}
+
+function getPageCharacterLimit() {
+
+    if (!lengthSelect) {
+        return 1450;
+    }
+
+    if (
+        lengthSelect.value === "short"
+    ) {
+        return 1050;
+    }
+
+    if (
+        lengthSelect.value === "long"
+    ) {
+        return 1550;
+    }
+
+    return 1350;
+}
 
 /* ============================================================
-   RENDER NOTE PAGE
+RENDER CURRENT PAGE
 ============================================================ */
 
 function renderNotePage() {
@@ -453,7 +637,7 @@ function renderNotePage() {
         return;
     }
 
-    if (notePages.length === 0) {
+    if (!notePages.length) {
 
         notesPreview.innerHTML =
             '<div class="empty-notes">' +
@@ -466,42 +650,15 @@ function renderNotePage() {
         return;
     }
 
-    const page = notePages[currentPage];
+    const page =
+        notePages[currentPage];
 
-    let content = "";
+    let html = "";
 
     page.lines.forEach(function (line) {
 
-        const isNumber =
-            /^\d+[.)]\s*/.test(line);
-
-        const isBullet =
-            /^[-*•]\s+/.test(line);
-
-        if (isNumber) {
-
-            content +=
-                '<div class="note-line note-heading">' +
-                formatInlineText(line) +
-                '</div>';
-
-        } else if (isBullet) {
-
-            content +=
-                '<div class="note-line note-bullet">' +
-                "• " +
-                formatInlineText(
-                    line.replace(/^[-*•]\s+/, "")
-                ) +
-                '</div>';
-
-        } else {
-
-            content +=
-                '<div class="note-line">' +
-                formatInlineText(line) +
-                '</div>';
-        }
+        html +=
+            renderNoteLine(line);
     });
 
     notesPreview.innerHTML =
@@ -518,9 +675,7 @@ function renderNotePage() {
         escapeHTML(page.question) +
         '</div>' +
 
-        '<div class="note-paper">' +
-        content +
-        '</div>' +
+        html +
 
         '<div class="note-page-footer">' +
         'Answer Pilot • Handwritten Study Notes' +
@@ -531,28 +686,133 @@ function renderNotePage() {
     updatePageControls();
 }
 
+/* ============================================================
+RENDER NOTE LINE
+============================================================ */
+
+function renderNoteLine(line) {
+
+    if (
+        /^#{1,3}\s+/.test(line)
+    ) {
+
+        return (
+            '<h2>' +
+            formatInline(
+                removeHeadingMarks(line)
+            ) +
+            '</h2>'
+        );
+    }
+
+    const numbered =
+        line.match(
+            /^(\d+)[.)]\s*(.+)$/
+        );
+
+    if (numbered) {
+
+        return (
+            '<p>' +
+            '<strong>' +
+            escapeHTML(numbered[1]) +
+            '.</strong> ' +
+            formatInline(
+                numbered[2]
+            ) +
+            '</p>'
+        );
+    }
+
+    const bullet =
+        line.match(
+            /^[-*•]\s*(.+)$/
+        );
+
+    if (bullet) {
+
+        return (
+            '<p>' +
+            '• ' +
+            formatInline(
+                bullet[1]
+            ) +
+            '</p>'
+        );
+    }
+
+    const specialHeading =
+        normalizeSpecialHeading(line);
+
+    if (specialHeading) {
+
+        return (
+            '<h3>' +
+            escapeHTML(
+                specialHeading
+            ) +
+            '</h3>'
+        );
+    }
+
+    return (
+        '<p>' +
+        formatInline(line) +
+        '</p>'
+    );
+}
 
 /* ============================================================
-   PAGE CONTROLS
+SPECIAL HEADINGS
+============================================================ */
+
+function normalizeSpecialHeading(line) {
+
+    const value =
+        line
+            .replace(/:$/, "")
+            .trim();
+
+    const lower =
+        value.toLowerCase();
+
+    const headings = {
+        "definition": "Definition",
+        "introduction": "Introduction",
+        "key points": "Key Points",
+        "important points": "Important Points",
+        "examples": "Examples",
+        "example": "Example",
+        "advantages": "Advantages",
+        "disadvantages": "Disadvantages",
+        "applications": "Applications",
+        "working": "Working",
+        "process": "Process",
+        "conclusion": "Conclusion",
+        "labelled diagram": "Labelled Diagram",
+        "labeled diagram": "Labelled Diagram"
+    };
+
+    return headings[lower] || "";
+}
+
+/* ============================================================
+PAGE CONTROLS
 ============================================================ */
 
 function updatePageControls() {
 
     if (pageCounter) {
 
-        if (notePages.length === 0) {
-
-            pageCounter.textContent =
-                "Page 0 / 0";
-
-        } else {
-
-            pageCounter.textContent =
-                "Page " +
-                (currentPage + 1) +
-                " / " +
-                notePages.length;
-        }
+        pageCounter.textContent =
+            "Page " +
+            (
+                notePages.length
+                    ? currentPage + 1
+                    : 0
+            ) +
+            " / " +
+            notePages.length;
     }
 
     if (previousPageButton) {
@@ -564,14 +824,10 @@ function updatePageControls() {
     if (nextPageButton) {
 
         nextPageButton.disabled =
-            currentPage >= notePages.length - 1;
+            currentPage >=
+            notePages.length - 1;
     }
 }
-
-
-/* ============================================================
-   PREVIOUS PAGE
-============================================================ */
 
 if (previousPageButton) {
 
@@ -588,11 +844,6 @@ if (previousPageButton) {
         }
     );
 }
-
-
-/* ============================================================
-   NEXT PAGE
-============================================================ */
 
 if (nextPageButton) {
 
@@ -613,9 +864,8 @@ if (nextPageButton) {
     );
 }
 
-
 /* ============================================================
-   COPY ANSWER
+COPY ANSWER
 ============================================================ */
 
 if (copyAnswerButton) {
@@ -626,7 +876,9 @@ if (copyAnswerButton) {
 
             if (!lastAnswer) {
 
-                alert("Generate an answer first.");
+                alert(
+                    "Generate an answer first."
+                );
 
                 return;
             }
@@ -643,24 +895,28 @@ if (copyAnswerButton) {
                 copyAnswerButton.textContent =
                     "✓ Copied";
 
-                setTimeout(function () {
+                setTimeout(
+                    function () {
 
-                    copyAnswerButton.textContent =
-                        oldText;
+                        copyAnswerButton.textContent =
+                            oldText;
 
-                }, 1500);
+                    },
+                    1500
+                );
 
             } catch (error) {
 
-                alert("Could not copy the answer.");
+                alert(
+                    "Could not copy the answer."
+                );
             }
         }
     );
 }
 
-
 /* ============================================================
-   REGENERATE
+REGENERATE
 ============================================================ */
 
 if (regenerateButton) {
@@ -671,24 +927,23 @@ if (regenerateButton) {
 
             if (!lastQuestion) {
 
-                alert("Generate an answer first.");
+                alert(
+                    "Generate an answer first."
+                );
 
                 return;
             }
 
-            if (questionInput) {
-                questionInput.value =
-                    lastQuestion;
-            }
+            questionInput.value =
+                lastQuestion;
 
             generateAnswer();
         }
     );
 }
 
-
 /* ============================================================
-   DOWNLOAD ANSWER
+DOWNLOAD ANSWER
 ============================================================ */
 
 if (downloadAnswerButton) {
@@ -699,21 +954,23 @@ if (downloadAnswerButton) {
 
             if (!lastAnswer) {
 
-                alert("Generate an answer first.");
+                alert(
+                    "Generate an answer first."
+                );
 
                 return;
             }
 
-            const text =
-                "Answer Pilot\n\n" +
-                "Question:\n" +
+            const content =
+                "ANSWER PILOT\n\n" +
+                "QUESTION:\n" +
                 lastQuestion +
                 "\n\n" +
-                "Answer:\n" +
+                "ANSWER:\n" +
                 lastAnswer;
 
             downloadFile(
-                text,
+                content,
                 "AnswerPilot_Answer.txt",
                 "text/plain"
             );
@@ -721,9 +978,8 @@ if (downloadAnswerButton) {
     );
 }
 
-
 /* ============================================================
-   DOWNLOAD HANDWRITTEN NOTES
+DOWNLOAD NOTES
 ============================================================ */
 
 if (downloadNotesButton) {
@@ -732,121 +988,20 @@ if (downloadNotesButton) {
         "click",
         function () {
 
-            if (notePages.length === 0) {
+            if (!notePages.length) {
 
-                alert("Generate an answer first.");
+                alert(
+                    "Generate an answer first."
+                );
 
                 return;
             }
 
-            let html = "";
-
-            notePages.forEach(
-                function (page, index) {
-
-                    let linesHTML = "";
-
-                    page.lines.forEach(
-                        function (line) {
-
-                            linesHTML +=
-                                '<div class="line">' +
-                                formatInlineText(line) +
-                                '</div>';
-                        }
-                    );
-
-                    html +=
-                        '<section class="page">' +
-
-                        '<header>' +
-                        '<strong>Answer Pilot — AI Study Notes</strong>' +
-                        '<span>Page ' +
-                        (index + 1) +
-                        '</span>' +
-                        '</header>' +
-
-                        '<h1>' +
-                        escapeHTML(page.question) +
-                        '</h1>' +
-
-                        linesHTML +
-
-                        '<footer>' +
-                        'Answer Pilot • Handwritten Study Notes' +
-                        '</footer>' +
-
-                        '</section>';
-                }
-            );
-
-            const fullHTML =
-                '<!DOCTYPE html>' +
-                '<html>' +
-                '<head>' +
-
-                '<meta charset="UTF-8">' +
-
-                '<title>Answer Pilot Notes</title>' +
-
-                '<style>' +
-
-                'body {' +
-                'margin: 0;' +
-                'background: #dddddd;' +
-                'font-family: "Comic Sans MS", cursive;' +
-                '}' +
-
-                '.page {' +
-                'width: 210mm;' +
-                'min-height: 297mm;' +
-                'margin: 20px auto;' +
-                'padding: 25mm;' +
-                'box-sizing: border-box;' +
-                'background: white;' +
-                'background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, #d7e6f5 32px);' +
-                '}' +
-
-                'header {' +
-                'display: flex;' +
-                'justify-content: space-between;' +
-                'margin-bottom: 30px;' +
-                '}' +
-
-                'h1 {' +
-                'font-size: 26px;' +
-                'margin-bottom: 30px;' +
-                '}' +
-
-                '.line {' +
-                'font-size: 18px;' +
-                'line-height: 32px;' +
-                'min-height: 32px;' +
-                '}' +
-
-                'footer {' +
-                'margin-top: 40px;' +
-                'text-align: center;' +
-                'font-size: 13px;' +
-                '}' +
-
-                '@media print {' +
-                'body { background: white; }' +
-                '.page { margin: 0; page-break-after: always; }' +
-                '}' +
-
-                '</style>' +
-
-                '</head>' +
-
-                '<body>' +
-                html +
-                '</body>' +
-
-                '</html>';
+            const html =
+                buildPrintableNotes();
 
             downloadFile(
-                fullHTML,
+                html,
                 "AnswerPilot_Handwritten_Notes.html",
                 "text/html"
             );
@@ -854,21 +1009,240 @@ if (downloadNotesButton) {
     );
 }
 
+/* ============================================================
+PRINTABLE NOTES
+============================================================ */
+
+function buildPrintableNotes() {
+
+    let pagesHTML = "";
+
+    notePages.forEach(
+        function (page, index) {
+
+            let content = "";
+
+            page.lines.forEach(
+                function (line) {
+
+                    content +=
+                        renderPrintableLine(
+                            line
+                        );
+                }
+            );
+
+            pagesHTML +=
+                '<section class="print-page">' +
+
+                '<header>' +
+
+                '<strong>' +
+                'Answer Pilot — AI Study Notes' +
+                '</strong>' +
+
+                '<span>' +
+                'Page ' +
+                (index + 1) +
+                '</span>' +
+
+                '</header>' +
+
+                '<h1>' +
+                escapeHTML(
+                    page.question
+                ) +
+                '</h1>' +
+
+                content +
+
+                '<footer>' +
+                'Answer Pilot • Handwritten Study Notes' +
+                '</footer>' +
+
+                '</section>';
+        }
+    );
+
+    return (
+        "<!DOCTYPE html>" +
+        "<html>" +
+        "<head>" +
+        '<meta charset="UTF-8">' +
+        "<title>Answer Pilot Notes</title>" +
+
+        "<style>" +
+
+        "body{" +
+        "margin:0;" +
+        "background:#ddd;" +
+        'font-family:"Comic Sans MS","Segoe Print",cursive;' +
+        "}" +
+
+        ".print-page{" +
+        "width:210mm;" +
+        "min-height:297mm;" +
+        "box-sizing:border-box;" +
+        "margin:20px auto;" +
+        "padding:22mm 18mm 20mm 25mm;" +
+        "position:relative;" +
+        "background:#fffdf5;" +
+        "background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 30px,#dce5ef 31px,#fffdf5 32px);" +
+        "page-break-after:always;" +
+        "}" +
+
+        ".print-page:before{" +
+        "content:'';" +
+        "position:absolute;" +
+        "left:18mm;" +
+        "top:0;" +
+        "bottom:0;" +
+        "width:1px;" +
+        "background:#df9696;" +
+        "}" +
+
+        ".print-page header{" +
+        "display:flex;" +
+        "justify-content:space-between;" +
+        "font-size:12px;" +
+        "margin-bottom:24px;" +
+        "}" +
+
+        ".print-page h1{" +
+        "font-size:24px;" +
+        "text-align:center;" +
+        "color:#31558d;" +
+        "margin-bottom:24px;" +
+        "}" +
+
+        ".print-page h2," +
+        ".print-page h3{" +
+        "color:#d32d87;" +
+        "margin-top:16px;" +
+        "margin-bottom:8px;" +
+        "}" +
+
+        ".print-page p{" +
+        "font-size:14px;" +
+        "line-height:1.95;" +
+        "color:#263f6b;" +
+        "margin:5px 0;" +
+        "}" +
+
+        ".print-page footer{" +
+        "position:absolute;" +
+        "left:0;" +
+        "right:0;" +
+        "bottom:12px;" +
+        "text-align:center;" +
+        "font-size:11px;" +
+        "}" +
+
+        "@media print{" +
+        "body{background:white;}" +
+        ".print-page{margin:0;}" +
+        "}" +
+
+        "</style>" +
+
+        "</head>" +
+
+        "<body>" +
+
+        pagesHTML +
+
+        "</body>" +
+
+        "</html>"
+    );
+}
+
+function renderPrintableLine(line) {
+
+    if (/^#{1,3}\s+/.test(line)) {
+
+        return (
+            "<h2>" +
+            formatInline(
+                removeHeadingMarks(line)
+            ) +
+            "</h2>"
+        );
+    }
+
+    const numbered =
+        line.match(
+            /^(\d+)[.)]\s*(.+)$/
+        );
+
+    if (numbered) {
+
+        return (
+            "<p><strong>" +
+            escapeHTML(
+                numbered[1]
+            ) +
+            ".</strong> " +
+            formatInline(
+                numbered[2]
+            ) +
+            "</p>"
+        );
+    }
+
+    const bullet =
+        line.match(
+            /^[-*•]\s*(.+)$/
+        );
+
+    if (bullet) {
+
+        return (
+            "<p>• " +
+            formatInline(
+                bullet[1]
+            ) +
+            "</p>"
+        );
+    }
+
+    const special =
+        normalizeSpecialHeading(line);
+
+    if (special) {
+
+        return (
+            "<h3>" +
+            escapeHTML(special) +
+            "</h3>"
+        );
+    }
+
+    return (
+        "<p>" +
+        formatInline(line) +
+        "</p>"
+    );
+}
 
 /* ============================================================
-   DOWNLOAD FILE
+FILE DOWNLOAD
 ============================================================ */
 
 function downloadFile(
     content,
     filename,
-    type
+    mimeType
 ) {
 
     const blob =
         new Blob(
             [content],
-            { type: type + ";charset=utf-8" }
+            {
+                type:
+                    mimeType +
+                    ";charset=utf-8"
+            }
         );
 
     const url =
@@ -880,18 +1254,23 @@ function downloadFile(
     link.href = url;
     link.download = filename;
 
-    document.body.appendChild(link);
+    document.body.appendChild(
+        link
+    );
 
     link.click();
 
-    document.body.removeChild(link);
+    document.body.removeChild(
+        link
+    );
 
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(
+        url
+    );
 }
 
-
 /* ============================================================
-   ENTER KEY
+ENTER KEY
 ============================================================ */
 
 if (questionInput) {
@@ -913,22 +1292,8 @@ if (questionInput) {
     );
 }
 
-
 /* ============================================================
-   GENERATE BUTTON
-============================================================ */
-
-if (generateButton) {
-
-    generateButton.addEventListener(
-        "click",
-        generateAnswer
-    );
-}
-
-
-/* ============================================================
-   FILE UPLOAD
+PDF UPLOAD
 ============================================================ */
 
 if (fileInput) {
@@ -938,11 +1303,17 @@ if (fileInput) {
         async function () {
 
             const files =
-                Array.from(fileInput.files);
+                Array.from(
+                    fileInput.files
+                );
 
-            for (const file of files) {
+            for (
+                const file of files
+            ) {
 
-                await uploadFile(file);
+                await uploadFile(
+                    file
+                );
             }
 
             fileInput.value = "";
@@ -950,20 +1321,20 @@ if (fileInput) {
     );
 }
 
-
 /* ============================================================
-   UPLOAD FILE
+UPLOAD PDF
 ============================================================ */
 
 async function uploadFile(file) {
 
     if (
-        !file.name.toLowerCase().endsWith(".pdf")
+        !file.name
+            .toLowerCase()
+            .endsWith(".pdf")
     ) {
 
         alert(
-            file.name +
-            ": Only PDF files are supported."
+            "Only PDF files are supported."
         );
 
         return;
@@ -991,7 +1362,10 @@ async function uploadFile(file) {
         const data =
             await response.json();
 
-        if (!response.ok || !data.success) {
+        if (
+            !response.ok ||
+            !data.success
+        ) {
 
             throw new Error(
                 data.message ||
@@ -1000,9 +1374,16 @@ async function uploadFile(file) {
         }
 
         uploadedFiles.push({
-            name: data.filename || file.name,
-            size: file.size,
-            chunks: data.chunks || 0
+
+            name:
+                data.filename ||
+                file.name,
+
+            size:
+                file.size,
+
+            chunks:
+                data.chunks || 0
         });
 
         updateFileList();
@@ -1023,9 +1404,8 @@ async function uploadFile(file) {
     }
 }
 
-
 /* ============================================================
-   UPDATE FILE LIST
+FILE LIST
 ============================================================ */
 
 function updateFileList() {
@@ -1040,7 +1420,9 @@ function updateFileList() {
         function (file, index) {
 
             const item =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             item.className =
                 "uploaded-file";
@@ -1052,23 +1434,29 @@ function updateFileList() {
 
                 '<div>' +
 
-                '<strong>' +
-                escapeHTML(file.name) +
-                '</strong>' +
+                "<strong>" +
+                escapeHTML(
+                    file.name
+                ) +
+                "</strong>" +
 
-                '<small>' +
-                formatFileSize(file.size) +
-                '</small>' +
+                "<small>" +
+                formatFileSize(
+                    file.size
+                ) +
+                "</small>" +
 
-                '</div>' +
+                "</div>" +
 
-                '</div>' +
+                "</div>" +
 
                 '<button type="button" class="remove-file" data-index="' +
                 index +
                 '">×</button>';
 
-            fileList.appendChild(item);
+            fileList.appendChild(
+                item
+            );
         }
     );
 
@@ -1083,38 +1471,38 @@ function updateFileList() {
             );
     }
 
-    const removeButtons =
-        document.querySelectorAll(".remove-file");
+    document
+        .querySelectorAll(
+            ".remove-file"
+        )
+        .forEach(
+            function (button) {
 
-    removeButtons.forEach(
-        function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-            button.addEventListener(
-                "click",
-                function () {
+                        const index =
+                            Number(
+                                button.getAttribute(
+                                    "data-index"
+                                )
+                            );
 
-                    const index =
-                        Number(
-                            button.getAttribute(
-                                "data-index"
-                            )
+                        uploadedFiles.splice(
+                            index,
+                            1
                         );
 
-                    uploadedFiles.splice(
-                        index,
-                        1
-                    );
-
-                    updateFileList();
-                }
-            );
-        }
-    );
+                        updateFileList();
+                    }
+                );
+            }
+        );
 }
 
-
 /* ============================================================
-   FILE SIZE
+FILE SIZE
 ============================================================ */
 
 function formatFileSize(bytes) {
@@ -1140,7 +1528,10 @@ function formatFileSize(bytes) {
         parseFloat(
             (
                 bytes /
-                Math.pow(1024, index)
+                Math.pow(
+                    1024,
+                    index
+                )
             ).toFixed(1)
         ) +
         " " +
@@ -1148,24 +1539,23 @@ function formatFileSize(bytes) {
     );
 }
 
-
 /* ============================================================
-   INITIALIZE
+INITIALIZE
 ============================================================ */
 
 document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        const activeButton =
+        const active =
             document.querySelector(
                 ".answer-type.active"
             );
 
-        if (activeButton) {
+        if (active) {
 
             selectedAnswerType =
-                activeButton.getAttribute(
+                active.getAttribute(
                     "data-type"
                 ) || "exam";
 
