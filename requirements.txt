@@ -5,3 +5,4 @@ chromadb
 sentence-transformers
 reportlab
 Pillow
+gunicorn==26.2.0
